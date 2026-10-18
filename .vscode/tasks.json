@@ -1,0 +1,73 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Check app import",
+			"type": "shell",
+			"command": "python -c \"import app; print('OK')\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Compile app files",
+			"type": "shell",
+			"command": "python -m py_compile app.py services/search_service.py services/indexing_service.py utils/image_utils.py models/clip_model.py",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Run Streamlit app",
+			"type": "shell",
+			"command": "python -m streamlit run app.py --server.headless true --server.port 8501",
+			"args": [],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Probe dataset and index behavior",
+			"type": "shell",
+			"command": "python -c \"from pathlib import Path; from services.indexing_service import build_index; from models.clip_model import load_clip_model; import os; print('images', len(list(Path('dataset/images').rglob('*')))); print('exists', Path('dataset/images').exists()); model = load_clip_model(); print(type(model)); print(build_index(image_directory='dataset/images', embeddings_path='index/test_embeddings.npy', paths_path='index/test_paths.txt', faiss_path='index/test_faiss.index', clip_model=model))\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Validate data and index files",
+			"type": "shell",
+			"command": "cmd /c \"python -c \\\"from pathlib import Path; print('dataset_exists=', Path('dataset/images').exists()); print('supported_files=', len(list(Path('dataset/images').rglob('*')))); print('index_exists=', Path('index/faiss.index').exists()); print('paths_exists=', Path('index/image_paths.txt').exists());\\\"\"",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Reproduce uploaded-image pointer bug",
+			"type": "shell",
+			"command": "cmd /c \"python -c \\\"import io; from PIL import Image; buf = io.BytesIO(); Image.new('RGB', (10, 10)).save(buf, format='PNG'); buf.seek(0); preview = Image.open(buf).convert('RGB'); print('preview ok', preview.size); try: second = Image.open(buf).convert('RGB'); print('second ok', second.size); except Exception as e: print(type(e).__name__, e); buf.seek(0); second = Image.open(buf).convert('RGB'); print('after seek ok', second.size)\\\"\"",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Verify uploaded image reset fix",
+			"type": "shell",
+			"command": "cmd /c \"python -c \\\"import io; from PIL import Image; data = io.BytesIO(); Image.new('RGB', (8, 8), color='red').save(data, format='PNG'); data.seek(0); preview = Image.open(data).convert('RGB'); print('preview', preview.size); try: Image.open(data).convert('RGB'); print('no reset: failed unexpectedly'); except Exception as e: print('no reset:', type(e).__name__); data.seek(0); second = Image.open(data).convert('RGB'); print('with reset:', second.size)\\\"\"",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Compile fixed app",
+			"type": "shell",
+			"command": "cmd /c \"python -m py_compile app.py services/search_service.py services/indexing_service.py utils/image_utils.py models/clip_model.py\"",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		}
+	]
+}

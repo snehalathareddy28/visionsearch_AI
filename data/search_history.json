@@ -1,0 +1,20 @@
+[
+  {
+    "query": "dog",
+    "mode": "text",
+    "result_count": 5,
+    "timestamp": "2026-09-09T04:38:24.287799+00:00"
+  },
+  {
+    "query": "white color dog",
+    "mode": "text",
+    "result_count": 5,
+    "timestamp": "2026-09-09T04:38:53.060823+00:00"
+  },
+  {
+    "query": "white color dog",
+    "mode": "text",
+    "result_count": 5,
+    "timestamp": "2026-09-09T04:43:44.540115+00:00"
+  }
+]
