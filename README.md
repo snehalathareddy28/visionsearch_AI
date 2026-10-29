@@ -19,15 +19,25 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Place source images under `dataset/images/` and select **My Images** in the
-Dataset Management section to build the CLIP/FAISS artifacts.
+The default command-line build indexes all supported images under
+`dataset/caltech-101-selected/`. This includes any additional images you put in
+that folder, such as dog images. It replaces the existing
+`index/image_embeddings.npy`, `index/image_paths.txt`, and `index/faiss.index`
+artifacts.
+
+In the app, select **Caltech-101 Selected** to index that folder, or select
+**My Images** to index images under `dataset/images/`.
+Text search also uses matching image-folder names as category labels, so an
+explicit category such as “dog” is not outranked by unrelated images merely
+because the query also describes an action or scene. Results show the category
+alongside the image filename.
 
 To use Caltech-101, place its `101_ObjectCategories.tar.gz` archive at
 `caltech-101/101_ObjectCategories.tar.gz`. Select **Caltech-101** in Dataset
 Management and build the index; the app extracts supported images into
 `dataset/caltech-101/` before indexing them.
 
-You can also build the default `dataset/images/` index from the command line:
+You can also build the default `dataset/caltech-101-selected/` index from the command line:
 
 ```bash
 python embeddings/image_embeddings.py

@@ -200,4 +200,9 @@ def render_result_cards(results: list[dict], project_root: Path) -> None:
                     st.warning(f"Image file missing: {image_path}")
                 st.metric("Similarity", f"{result['score']:.4f}")
                 st.caption(f"FAISS ID: {result['faiss_id']}")
+                category = image_path.parent.name
+                if result.get("category_match"):
+                    st.caption(f"{category} · matched query category")
+                else:
+                    st.caption(category)
                 st.caption(image_path.name)

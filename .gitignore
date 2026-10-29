@@ -10,3 +10,12 @@ dataset/
 __MACOSX/
 *.tar
 *.tar.gz
+# Test cache
+.pytest_cache/
+
+# IDE settings
+.idea/
+.vscode/
+
+# Logs
+*.log

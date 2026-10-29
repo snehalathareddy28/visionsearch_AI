@@ -5,7 +5,7 @@ from pathlib import PurePosixPath
 from PIL import Image
 
 from models.clip_model import load_clip_model
-from services.search_service import load_index, search_loaded
+from services.search_service import load_index, search_loaded, search_text_loaded
 from services.indexing_service import (
     build_index,
     extract_image_archive,
@@ -36,6 +36,7 @@ PATHS_PATH = PROJECT_ROOT / "index" / "image_paths.txt"
 EMBEDDINGS_PATH = PROJECT_ROOT / "index" / "image_embeddings.npy"
 
 IMAGE_DIRECTORY = PROJECT_ROOT / "dataset" / "images"
+CALTECH_SELECTED_IMAGE_DIRECTORY = PROJECT_ROOT / "dataset" / "caltech-101-selected"
 CALTECH_ARCHIVE_PATH = PROJECT_ROOT / "caltech-101" / "101_ObjectCategories.tar.gz"
 CALTECH_IMAGE_DIRECTORY = PROJECT_ROOT / "dataset" / "caltech-101"
 
@@ -230,7 +231,8 @@ if search_mode == "Text Search":
                 )
 
                 # Search FAISS
-                results = search_loaded(
+                results = search_text_loaded(
+                    query.strip(),
                     index,
                     paths,
                     query_embedding,
@@ -366,18 +368,40 @@ st.divider()
 
 st.header("Dataset management")
 
-dataset_options = ["My Images (dataset/images)"]
+my_images_option = "My Images (dataset/images)"
+selected_caltech_option = "Caltech-101 Selected (dataset/caltech-101-selected)"
+archive_caltech_option = "Caltech-101 (from archive)"
+dataset_options = [my_images_option]
+selected_caltech_available = CALTECH_SELECTED_IMAGE_DIRECTORY.is_dir()
+if selected_caltech_available:
+    dataset_options.append(selected_caltech_option)
 caltech_archive_available = CALTECH_ARCHIVE_PATH.is_file()
 if caltech_archive_available:
-    dataset_options.append("Caltech-101")
+    dataset_options.append(archive_caltech_option)
+
+default_dataset_index = 0
+if selected_caltech_available:
+    default_dataset_index = dataset_options.index(selected_caltech_option)
+elif caltech_archive_available:
+    default_dataset_index = dataset_options.index(archive_caltech_option)
 
 selected_dataset = st.selectbox(
     "Dataset to index",
     dataset_options,
-    index=1 if caltech_archive_available else 0,
+    index=default_dataset_index,
 )
 
-if selected_dataset == "Caltech-101":
+if selected_dataset == selected_caltech_option:
+    selected_images = list_images(CALTECH_SELECTED_IMAGE_DIRECTORY)
+    st.success(
+        f"Caltech-101 Selected — {len(selected_images):,} supported image(s) "
+        f"detected in `{CALTECH_SELECTED_IMAGE_DIRECTORY}`."
+    )
+    st.warning(
+        "Building this index replaces the existing FAISS index, image embeddings, "
+        "and image paths. Confirm this folder contains every image you want searchable."
+    )
+elif selected_dataset == archive_caltech_option:
     if caltech_archive_available:
         extracted_images = list_images(CALTECH_IMAGE_DIRECTORY)
         archive_image_count = get_caltech_image_count(
@@ -427,7 +451,9 @@ if st.button(
         ):
 
             selected_image_directory = IMAGE_DIRECTORY
-            if selected_dataset == "Caltech-101":
+            if selected_dataset == selected_caltech_option:
+                selected_image_directory = CALTECH_SELECTED_IMAGE_DIRECTORY
+            elif selected_dataset == archive_caltech_option:
                 if not CALTECH_ARCHIVE_PATH.is_file():
                     raise FileNotFoundError(
                         f"Caltech-101 archive not found: {CALTECH_ARCHIVE_PATH}"

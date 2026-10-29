@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VisionSearch AI</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-icon">✦</div><div><strong>VisionSearch</strong><small>AI IMAGE INTELLIGENCE</small></div></div>
+      <div class="side-label">WORKSPACE</div>
+      <button class="nav-item active" data-mode="text">⌕ <span>Text Search</span></button>
+      <button class="nav-item" data-mode="image">▧ <span>Image Search</span></button>
+      <div class="side-note"><div class="pulse"></div><div><strong>AI Engine</strong><small id="engine-status">Checking connection…</small></div></div>
+      <div class="sidebar-footer">VISIONSEARCH AI <span>•</span> MULTIMODAL RETRIEVAL</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><div class="crumb">Workspace <span>/</span> <b id="crumb-mode">Text Search</b></div><div class="status"><i></i> Local environment</div></header>
+      <section class="hero">
+        <div class="eyebrow"><span>✦</span> MULTIMODAL SEMANTIC SEARCH</div>
+        <h1>Find images by <span>meaning.</span></h1>
+        <p>Search your visual library using natural language or a reference image.</p>
+      </section>
+
+      <section class="search-panel">
+        <div class="mode-tabs">
+          <button class="mode-tab selected" data-mode="text">⌕ &nbsp; Text to Image</button>
+          <button class="mode-tab" data-mode="image">▧ &nbsp; Image to Image</button>
+        </div>
+        <form id="text-form" class="search-form">
+          <label for="query">DESCRIBE WHAT YOU'RE LOOKING FOR</label>
+          <div class="search-row"><span class="search-symbol">⌕</span><input id="query" placeholder="e.g. A red handbag with a golden chain for a party" autocomplete="off"><button class="primary" type="submit">Search images <span>↗</span></button></div>
+          <div class="examples"><span>Try:</span><button type="button" class="example">A dog running on grass</button><button type="button" class="example">A red sports car</button><button type="button" class="example">Butterfly on a flower</button></div>
+        </form>
+        <form id="image-form" class="search-form hidden">
+          <label for="image-file">UPLOAD A REFERENCE IMAGE</label>
+          <label class="dropzone" for="image-file"><span class="upload-icon">↑</span><strong>Choose an image to find similar visuals</strong><small>JPG, PNG, WEBP or BMP</small><span class="file-name" id="file-name">No image selected</span></label>
+          <input id="image-file" type="file" accept="image/*" hidden>
+          <button class="primary image-submit" type="submit">Find similar images <span>↗</span></button>
+        </form>
+      </section>
+
+      <section class="results-section">
+        <div class="results-heading"><div><div class="eyebrow">YOUR VISUAL LIBRARY</div><h2 id="results-title">Ready when you are</h2></div><div class="result-tools"><label for="top-k">Results</label><select id="top-k"><option value="5">5 images</option><option value="10" selected>10 images</option><option value="20">20 images</option></select></div></div>
+        <div id="message" class="message">Enter a description above to search your indexed image collection.</div>
+        <div id="results" class="gallery"></div>
+      </section>
+      <footer>Powered by <b>CLIP</b> embeddings &amp; <b>FAISS</b> vector search <span>•</span> VisionSearch AI</footer>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

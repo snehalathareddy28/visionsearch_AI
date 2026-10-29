@@ -13,7 +13,7 @@ from models.clip_model import ClipModel, load_clip_model
 from utils.image_utils import SUPPORTED_EXTENSIONS, list_images
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_IMAGE_DIRECTORY = PROJECT_ROOT / "dataset" / "images"
+DEFAULT_IMAGE_DIRECTORY = PROJECT_ROOT / "dataset" / "caltech-101-selected"
 DEFAULT_INDEX_DIRECTORY = PROJECT_ROOT / "index"
 DEFAULT_EMBEDDINGS_PATH = DEFAULT_INDEX_DIRECTORY / "image_embeddings.npy"
 DEFAULT_PATHS_PATH = DEFAULT_INDEX_DIRECTORY / "image_paths.txt"
