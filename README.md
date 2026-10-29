@@ -50,3 +50,45 @@ python test_search.py
 ```
 
 The generated files are `index/image_embeddings.npy`, `index/image_paths.txt`, and `index/faiss.index`.
+
+## Web UI image uploads
+
+The FastAPI web UI supports individual images, multiple image selections, and
+folder selection (including nested folders in browsers that support
+`webkitdirectory`). Images can also be dragged into the upload area. Uploads
+accept JPEG, PNG, and WebP image content; the server verifies and decodes each
+image rather than trusting its filename or browser MIME type.
+
+Install the web UI dependencies and launch it from the project root:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip install -r visionsearch_web_ui/requirements-ui.txt
+python -m uvicorn visionsearch_web_ui.api:app --reload
+```
+
+Open `http://127.0.0.1:8000` and choose **Upload Images**. The default limits
+are 10 MB per image, 25 MB total image data, and 20 images per request. The
+website splits folder selections into sequential batches using the API's
+advertised limits, reports added/duplicate/failed counts, and lets you retry
+failed files. Override the limits before launch with
+`VISIONSEARCH_MAX_UPLOAD_FILE_MB`, `VISIONSEARCH_MAX_UPLOAD_REQUEST_MB`
+(integer megabytes), and `VISIONSEARCH_MAX_UPLOAD_FILES_PER_REQUEST`.
+
+Uploaded images are stored under `uploads/`, with sanitized folder-relative
+paths retained for folder uploads. The API adds normalized CLIP embeddings to
+the existing FAISS collection and atomically updates
+`index/faiss.index`, `index/image_paths.txt`, and `index/image_embeddings.npy`.
+Each artifact is atomically replaced under a transaction journal; an interrupted
+update is rolled back when the API next loads the index. Existing vectors remain
+in the collection; identical image content is skipped using SHA-256 checksums,
+including images already present in the legacy index.
+Uploads are available to text and image searches immediately and remain
+available after restart. The UI requires the existing index artifacts to be
+present and consistent before it can add images.
+
+Run the automated tests, including the upload API tests, from the project root:
+
+```bash
+python -m unittest discover -s tests -v
+```

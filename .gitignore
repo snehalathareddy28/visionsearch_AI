@@ -7,6 +7,10 @@ __pycache__/
 !.env.example
 .streamlit/secrets.toml
 dataset/
+/uploads/
+index/*.tmp
+index/*.bak
+/index/.upload-index-transaction.json
 __MACOSX/
 *.tar
 *.tar.gz

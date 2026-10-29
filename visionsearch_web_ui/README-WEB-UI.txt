@@ -1,39 +1,39 @@
-VISIONSEARCH AI — CUSTOM WEB UI SETUP
-=====================================
+VISIONSEARCH AI — FASTAPI WEB UI
+===============================
 
-This is a starter frontend and FastAPI adapter intended to sit alongside your
-existing VisionSearch AI project. It does not replace app.py or your backend files.
+Run these commands from the project root (the folder containing app.py,
+models/, services/, index/, and visionsearch_web_ui/):
 
-1. Copy api.py, frontend/, and requirements-ui.txt into the ROOT of your existing
-   project (the same folder that contains app.py, models/, services/, index/, etc.).
-
-2. Open PowerShell in the project root:
-   cd C:\visionsearch-ai
-
-3. Activate your existing environment:
+1. Activate the existing virtual environment:
    .\venv\Scripts\Activate.ps1
 
-4. Install the small set of web API dependencies:
-   python -m pip install -r requirements-ui.txt
+2. Install the project and web API dependencies:
+   python -m pip install -r requirements.txt
+   python -m pip install -r visionsearch_web_ui\requirements-ui.txt
 
-5. Make sure the existing image index exists:
+3. Ensure the existing index files are present:
    index\faiss.index
    index\image_paths.txt
    index\image_embeddings.npy
 
-   If it does not exist yet, you can temporarily run your existing Streamlit app
-   only to build the index, or use your existing indexing script. The custom web UI
-   itself does not use Streamlit.
+4. Start the website and API:
+   python -m uvicorn visionsearch_web_ui.api:app --reload
 
-6. Start the custom UI and API:
-   python -m uvicorn api:app --reload
+5. Open http://127.0.0.1:8000
 
-7. Open in Chrome:
-   http://127.0.0.1:8000
+Use the Text Search and Image Search tabs as before. Choose Upload Images to
+add JPEG, PNG, or WebP images individually, as a multiple-file selection, or
+from a folder (including nested folders in browsers that support
+webkitdirectory). The upload drop area also accepts image drag-and-drop.
 
-IMPORTANT:
-- Keep your existing app.py, models/, services/, utils/, dataset/, and index/ folders.
-- If your search service returns results in a different format than (image_path, score),
-  the API's normalize_results() in api.py may need a small adjustment.
-- If you see an import error, copy the complete terminal traceback so the imports can
-  be aligned with your actual project.
+Uploads are stored under uploads/ and appended to the existing CLIP/FAISS
+collection. The default limits are 10 MB per image, 25 MB total image data,
+and 20 files per request. The browser sends folders sequentially in batches
+that respect these limits. Configure them with VISIONSEARCH_MAX_UPLOAD_FILE_MB,
+VISIONSEARCH_MAX_UPLOAD_REQUEST_MB (integer megabytes), and
+VISIONSEARCH_MAX_UPLOAD_FILES_PER_REQUEST.
+
+The upload summary reports successful, duplicate, and failed files separately.
+SHA-256 content checks skip duplicates already present in the existing index,
+even when the indexed filename differs. Failed files can be retried without
+re-uploading successful or duplicate files.
