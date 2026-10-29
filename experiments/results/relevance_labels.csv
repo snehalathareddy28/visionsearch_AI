@@ -1,0 +1,36 @@
+﻿query,image_path,relevant
+a car on the road,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0001.jpg,1
+a car on the road,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0003.jpg,1
+a car on the road,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0006.jpg,1
+a car on the road,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0007.jpg,1
+a car on the road,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0009.jpg,1
+a car on the road,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0010.jpg,1
+a dog running,C:\visionsearch-ai\dataset\caltech-101-selected\cougar_body\image_0003.jpg,0
+a dog running,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog.jpg,0
+a dog running,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog1.jpg,0
+a dog running,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog3.jpg,0
+a dog running,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog4.jpg,1
+a dog running,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog5.jpg,1
+a dog running,C:\visionsearch-ai\dataset\caltech-101-selected\gerenuk\image_0010.jpg,0
+a dog running,C:\visionsearch-ai\dataset\caltech-101-selected\stegosaurus\image_0009.jpg,0
+car,C:\visionsearch-ai\dataset\caltech-101-selected\cannon\image_0003.jpg,0
+car,C:\visionsearch-ai\dataset\caltech-101-selected\cannon\image_0006.jpg,0
+car,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0001.jpg,1
+car,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0002.jpg,1
+car,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0003.jpg,1
+car,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0008.jpg,1
+car,C:\visionsearch-ai\dataset\caltech-101-selected\car_side\image_0009.jpg,1
+dog,C:\visionsearch-ai\dataset\caltech-101-selected\cougar_body\image_0003.jpg,0
+dog,C:\visionsearch-ai\dataset\caltech-101-selected\dalmatian\image_0004.jpg,1
+dog,C:\visionsearch-ai\dataset\caltech-101-selected\dalmatian\image_0005.jpg,1
+dog,C:\visionsearch-ai\dataset\caltech-101-selected\dalmatian\image_0010.jpg,1
+dog,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog.jpg,1
+dog,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog1.jpg,1
+dog,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog3.jpg,1
+dog,C:\visionsearch-ai\dataset\caltech-101-selected\dog\dog4.jpg,1
+flower,C:\visionsearch-ai\dataset\caltech-101-selected\lotus\image_0004.jpg,1
+flower,C:\visionsearch-ai\dataset\caltech-101-selected\lotus\image_0006.jpg,1
+flower,C:\visionsearch-ai\dataset\caltech-101-selected\lotus\image_0010.jpg,1
+flower,C:\visionsearch-ai\dataset\caltech-101-selected\sunflower\image_0010.jpg,1
+flower,C:\visionsearch-ai\dataset\caltech-101-selected\water_lilly\image_0005.jpg,1
+flower,C:\visionsearch-ai\dataset\caltech-101-selected\water_lilly\image_0009.jpg,1

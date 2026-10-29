@@ -1,0 +1,17 @@
+VisionSearch AI - Ranking Experiment
+====================================
+
+Indexed images: 1006
+Similarity threshold: 0.2
+Attribute weight: 0.3
+Category bonus: 0.04
+Queries tested: 5
+
+Mean baseline latency (ms): 168.602
+Mean attribute-aware latency (ms): 352.235
+
+Timing measurements are observations from this run, not definitive performance benchmarks. Model warm-up, CPU load, and execution order can affect timings. For stronger timing claims, repeat each query several times and report median latency after warm-up.
+
+Precision@5, Recall@5, and mAP are not calculated because relevance labels have not yet been provided. Ranking scores alone do not establish retrieval quality.
+
+CSV output: experiments/results/ranking_comparison.csv
