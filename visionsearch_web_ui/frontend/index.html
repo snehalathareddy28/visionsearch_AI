@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VisionSearch AI</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20261102-2">
+  <link rel="stylesheet" href="/share.css?v=20261102-2">
+  <link rel="stylesheet" href="/region_search.css?v=20261102-2">
 </head>
 <body>
   <div class="shell">
@@ -13,6 +15,7 @@
       <div class="side-label">WORKSPACE</div>
       <button class="nav-item active" data-mode="text">⌕ <span>Text Search</span></button>
       <button class="nav-item" data-mode="image">▧ <span>Image Search</span></button>
+      <button class="nav-item" data-mode="region">◈ <span>Region Search</span></button>
       <button class="nav-item" data-mode="upload">↑ <span>Upload Images</span></button>
       <div class="side-note"><div class="pulse"></div><div><strong>AI Engine</strong><small id="engine-status">Checking connection…</small></div></div>
       <div class="sidebar-footer">VISIONSEARCH AI <span>•</span> MULTIMODAL RETRIEVAL</div>
@@ -30,6 +33,7 @@
         <div class="mode-tabs">
           <button class="mode-tab selected" data-mode="text">⌕ &nbsp; Text to Image</button>
           <button class="mode-tab" data-mode="image">▧ &nbsp; Image to Image</button>
+          <button class="mode-tab" data-mode="region">◈ &nbsp; Region Search</button>
           <button class="mode-tab" data-mode="upload">↑ &nbsp; Upload Images</button>
         </div>
         <form id="text-form" class="search-form">
@@ -43,6 +47,68 @@
           <input id="image-file" type="file" accept="image/*" hidden>
           <button class="primary image-submit" type="submit">Find similar images <span>↗</span></button>
         </form>
+
+        <!-- ===== REGION SEARCH PANEL ===== -->
+        <div id="region-form" class="search-form hidden">
+          <label>REGION-BASED OBJECT SEARCH</label>
+
+          <!-- Controls row -->
+          <div class="region-controls">
+            <div class="region-control-group">
+              <span class="region-control-label">Search scope</span>
+              <div class="seg-group" id="scope-seg">
+                <button type="button" class="seg-btn" data-value="whole">Whole image</button>
+                <button type="button" class="seg-btn active" data-value="both">Both</button>
+                <button type="button" class="seg-btn" data-value="regions">Regions only</button>
+              </div>
+            </div>
+            <div class="region-control-group">
+              <span class="region-control-label">Split method</span>
+              <div class="seg-group" id="split-seg">
+                <button type="button" class="seg-btn active" data-value="yolo">YOLO</button>
+                <button type="button" class="seg-btn" data-value="grid">Grid</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Text query input -->
+          <div id="region-text-area">
+            <label for="region-query" style="font-size:0.72rem;opacity:0.6;margin-bottom:4px;display:block">TEXT QUERY (OR UPLOAD AN IMAGE BELOW)</label>
+            <div class="search-row">
+              <span class="search-symbol">⌕</span>
+              <input id="region-query" placeholder="e.g. a dog, a red car wheel, a small bird…" autocomplete="off">
+              <button class="primary" type="button" id="region-text-search-btn">Search <span>↗</span></button>
+            </div>
+          </div>
+
+          <!-- Image upload for region detection -->
+          <div class="region-image-area">
+            <label class="dropzone" for="region-image-file" id="region-dropzone">
+              <span class="upload-icon">↑</span>
+              <strong>Upload image to detect objects</strong>
+              <small>YOLO will find objects; or use grid tiling</small>
+            </label>
+            <input id="region-image-file" type="file" accept="image/*" hidden>
+            <button class="primary" type="button" id="region-detect-btn" style="display:none">Detect objects <span>↗</span></button>
+          </div>
+
+          <!-- Canvas overlay for draw-your-own-box + crop thumbnails -->
+          <div id="region-canvas-area" class="hidden">
+            <div class="region-canvas-label">
+              <span>Click and drag to draw a search region</span>
+              <button type="button" class="text-button" id="region-clear-draw">Clear box</button>
+            </div>
+            <div class="canvas-wrapper">
+              <canvas id="region-canvas"></canvas>
+            </div>
+            <div id="region-crops-row" class="region-crops-row"></div>
+            <div class="region-action-row">
+              <button class="primary" type="button" id="region-search-crop-btn">Search with selected region <span>↗</span></button>
+            </div>
+          </div>
+        </div>
+        <!-- ===== END REGION SEARCH PANEL ===== -->
+
         <form id="upload-form" class="search-form hidden">
           <label>ADD IMAGES TO YOUR SEARCH LIBRARY</label>
           <div id="upload-dropzone" class="upload-dropzone" tabindex="0" role="button" aria-label="Drop images here or choose files">
@@ -77,9 +143,11 @@
         <div id="message" class="message">Enter a description above to search your indexed image collection.</div>
         <div id="results" class="gallery"></div>
       </section>
-      <footer>Powered by <b>CLIP</b> embeddings &amp; <b>FAISS</b> vector search <span>•</span> VisionSearch AI</footer>
+      <footer>Powered by <b>CLIP</b> embeddings &amp; <b>FAISS</b> vector search <span>•</span> <b>YOLOv8</b> region detection <span>•</span> VisionSearch AI</footer>
     </main>
   </div>
-  <script src="/app.js"></script>
+  <script src="/share.js?v=20261102-2"></script>
+  <script src="/app.js?v=20261102-2"></script>
+  <script src="/region_search.js?v=20261102-2"></script>
 </body>
 </html>

@@ -68,6 +68,21 @@ class ClipModel:
             embedding = self._embedding_tensor(self.model.get_image_features(**inputs))
         return self._normalize(embedding)
 
+    def encode_images(self, images: list[Image.Image]) -> np.ndarray:
+        """Encode multiple PIL images in one normalized float32 batch."""
+        if not images:
+            raise ValueError("Images list cannot be empty")
+        if any(not isinstance(image, Image.Image) for image in images):
+            raise TypeError("Every image must be a PIL.Image.Image instance")
+        try:
+            rgb_images = [image.convert("RGB") for image in images]
+            inputs = self.processor(images=rgb_images, return_tensors="pt").to(self.device)
+        except Exception as error:
+            raise ValueError(f"Invalid image batch: {error}") from error
+        with torch.inference_mode():
+            embedding = self._embedding_tensor(self.model.get_image_features(**inputs))
+        return self._normalize(embedding)
+
 
 @lru_cache(maxsize=1)
 def get_clip_model(model_name: str = MODEL_NAME) -> ClipModel:

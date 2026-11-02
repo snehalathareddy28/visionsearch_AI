@@ -1,0 +1,83 @@
+.share-control {
+  position: relative;
+  margin-top: 9px;
+  color: #d8d7e7;
+  font-size: 11px;
+}
+
+.share-control summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border: 1px solid #40305e;
+  border-radius: 7px;
+  background: #211a37;
+  color: #d8caff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.share-control summary::-webkit-details-marker {
+  display: none;
+}
+
+.share-control summary:hover {
+  border-color: #8d6aff;
+}
+
+.share-menu {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 7px;
+  padding: 9px;
+  border: 1px solid #38334d;
+  border-radius: 9px;
+  background: #10101a;
+}
+
+.share-menu-action {
+  display: block;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #302c41;
+  border-radius: 6px;
+  background: #1a1927;
+  color: #d9d4eb;
+  font: inherit;
+  text-align: center;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+
+.share-menu-action:hover:not(:disabled) {
+  border-color: #8173ff;
+  background: #29213e;
+}
+
+.share-menu-action:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.share-link-notice,
+.share-feedback {
+  grid-column: 1 / -1;
+  color: #a6a2b9;
+  line-height: 1.4;
+}
+
+.share-feedback:empty {
+  display: none;
+}
+
+.share-feedback.error {
+  color: #ff9baf;
+}
+
+@media (max-width: 760px) {
+  .share-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

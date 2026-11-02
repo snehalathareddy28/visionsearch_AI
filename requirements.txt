@@ -6,3 +6,11 @@ torch
 torchvision
 transformers
 pandas
+fastapi
+uvicorn[standard]
+python-multipart
+tqdm
+ultralytics
+matplotlib
+scipy
+pytest

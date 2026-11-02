@@ -177,6 +177,9 @@ function renderResults(items) {
       score.textContent = `Similarity: ${item.score.toFixed(3)}`;
       meta.appendChild(score);
     }
+    if (window.VisionSearchShare) {
+      meta.appendChild(window.VisionSearchShare.createShareControl(item));
+    }
     card.append(img, meta);
     results.appendChild(card);
   }

@@ -1,8 +1,20 @@
 """Shared dark dashboard styling and presentation helpers."""
 
+import html
+import json
 from pathlib import Path
+import re
+from urllib.parse import quote
 
 import streamlit as st
+import streamlit.components.v1 as components
+
+from visionsearch_web_ui.sharing import (
+    LOCAL_API_BASE_URL,
+    PUBLIC_BASE_URL,
+    PUBLIC_SHARING_ENABLED,
+    image_id_for_path,
+)
 
 
 def apply_theme() -> None:
@@ -206,3 +218,143 @@ def render_result_cards(results: list[dict], project_root: Path) -> None:
                 else:
                     st.caption(category)
                 st.caption(image_path.name)
+                _render_share_options(image_path, project_root)
+
+
+def _render_share_options(image_path: Path, project_root: Path) -> None:
+    if not image_path.is_file():
+        return
+
+    image_id = image_id_for_path(image_path)
+    if image_id is None:
+        st.caption("Sharing is available for JPEG, PNG, and WebP images.")
+        return
+
+    public_url = None
+    if PUBLIC_SHARING_ENABLED and PUBLIC_BASE_URL:
+        public_url = f"{PUBLIC_BASE_URL}/api/share/images/{image_id}"
+
+    try:
+        relative_path = image_path.resolve().relative_to(project_root.resolve())
+    except (OSError, ValueError):
+        relative_path = None
+    local_image_url = None
+    if relative_path is not None:
+        encoded_path = quote(relative_path.as_posix(), safe="/")
+        local_image_url = f"{LOCAL_API_BASE_URL}/image/{encoded_path}"
+    copy_url = public_url or local_image_url
+
+    message = "Found this image using VisionSearch AI!"
+    sharing_text = message
+    if copy_url:
+        sharing_text = f"{message} {copy_url}"
+    whatsapp_url = f"https://wa.me/?text={quote(sharing_text, safe='')}"
+    telegram_url = (
+        f"https://t.me/share/url?url={quote(copy_url or '', safe='')}"
+        f"&text={quote(message, safe='')}"
+    )
+    email_url = (
+        f"mailto:?subject={quote('Image from VisionSearch AI', safe='')}"
+        f"&body={quote(sharing_text, safe='')}"
+    )
+
+    with st.expander("↗ Share or download", expanded=False):
+        if public_url:
+            st.markdown(
+                f'<a href="{html.escape(whatsapp_url, quote=True)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>'
+                f' · <a href="{html.escape(telegram_url, quote=True)}" target="_blank" rel="noopener noreferrer">Telegram</a>'
+                f' · <a href="{html.escape(email_url, quote=True)}">Email</a>',
+                unsafe_allow_html=True,
+            )
+        else:
+            social_columns = st.columns(3)
+            for column, label in zip(social_columns, ("WhatsApp", "Telegram", "Email")):
+                column.button(
+                    label,
+                    disabled=True,
+                    key=f"{label.lower()}-share-{image_id}",
+                    help="Enable approved public image links to share with external apps.",
+                )
+            st.caption(
+                "Public links are disabled. Configure and explicitly approve a public "
+                "indexed collection before enabling external share links."
+            )
+
+        if copy_url:
+            encoded_url = json.dumps(copy_url).replace("<", "\\u003c")
+            components.html(
+                f"""
+                <button id="copy-image-link" type="button">Copy image link</button>
+                <span id="copy-feedback" role="status" aria-live="polite"></span>
+                <script>
+                  const link = {encoded_url};
+                  const button = document.getElementById("copy-image-link");
+                  const feedback = document.getElementById("copy-feedback");
+                  button.addEventListener("click", async () => {{
+                    try {{
+                      await navigator.clipboard.writeText(link);
+                      feedback.textContent = "Copied.";
+                    }} catch {{
+                      feedback.textContent = "Clipboard access is unavailable.";
+                    }}
+                  }});
+                </script>
+                """,
+                height=44,
+            )
+            if not public_url:
+                st.caption("This is a local API link; it will not work on another device.")
+
+        image_url = local_image_url or public_url
+        if image_url:
+            safe_filename = re.sub(r"[^A-Za-z0-9._-]+", "_", image_path.name)
+            encoded_image_url = json.dumps(image_url).replace("<", "\\u003c")
+            encoded_filename = json.dumps(safe_filename).replace("<", "\\u003c")
+            components.html(
+                f"""
+                <button id="native-share-image" type="button">Share image…</button>
+                <span id="native-share-feedback" role="status" aria-live="polite"></span>
+                <script>
+                  const imageUrl = {encoded_image_url};
+                  const filename = {encoded_filename};
+                  const feedback = document.getElementById("native-share-feedback");
+                  document.getElementById("native-share-image").addEventListener("click", async () => {{
+                    if (!navigator.share) {{
+                      feedback.textContent = "Device sharing is unsupported in this browser.";
+                      return;
+                    }}
+                    try {{
+                      const response = await fetch(imageUrl);
+                      if (!response.ok) throw new Error("Image could not be loaded.");
+                      const blob = await response.blob();
+                      const file = new File([blob], filename, {{type: blob.type}});
+                      if (navigator.canShare && navigator.canShare({{files: [file]}})) {{
+                        await navigator.share({{files: [file], title: filename, text: {json.dumps(message)}}});
+                      }} else {{
+                        await navigator.share({{
+                          title: filename,
+                          text: {json.dumps(message)},
+                          ...( {json.dumps(public_url)} ? {{url: {json.dumps(public_url)}}} : {{}})
+                        }});
+                      }}
+                      feedback.textContent = "Share sheet opened.";
+                    }} catch (error) {{
+                      if (error.name !== "AbortError") feedback.textContent = error.message;
+                    }}
+                  }});
+                </script>
+                """,
+                height=44,
+            )
+
+        try:
+            with image_path.open("rb") as image_file:
+                st.download_button(
+                    "Download image",
+                    data=image_file,
+                    file_name=re.sub(r"[^A-Za-z0-9._-]+", "_", image_path.name),
+                    mime="application/octet-stream",
+                    key=f"download-{image_id}",
+                )
+        except OSError as error:
+            st.error(f"Image download is unavailable: {error}")

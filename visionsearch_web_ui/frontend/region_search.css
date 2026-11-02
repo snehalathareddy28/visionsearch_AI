@@ -1,0 +1,134 @@
+/* region_search.css — Styles for the region search panel (additive, no overrides) */
+
+/* ---- Segmented control ("Both / Whole / Regions") ---- */
+.seg-group {
+  display: flex;
+  gap: 0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+.seg-btn:last-child { border-right: none; }
+.seg-btn.active {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+.seg-btn:hover:not(.active) { background: rgba(255,255,255,0.06); color: #fff; }
+
+/* ---- Region controls row ---- */
+.region-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.region-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.region-control-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  opacity: 0.5;
+  text-transform: uppercase;
+}
+
+/* ---- Canvas wrapper ---- */
+.canvas-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.15);
+  cursor: crosshair;
+  max-width: 100%;
+}
+#region-canvas {
+  display: block;
+  max-width: 100%;
+}
+.region-canvas-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+
+/* ---- Crop thumbnail strip ---- */
+.region-crops-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+.crop-thumb {
+  position: relative;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+.crop-thumb:hover { transform: scale(1.04); border-color: rgba(255,255,255,0.35); }
+.crop-thumb.selected { border-color: #7eebd9; }
+.crop-thumb img { width: 80px; height: 80px; object-fit: cover; display: block; }
+.crop-thumb .crop-label {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.65);
+  font-size: 0.6rem;
+  color: #eee;
+  text-align: center;
+  padding: 2px 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Region canvas area ---- */
+#region-canvas-area { margin-top: 16px; }
+.region-action-row { margin-top: 12px; }
+
+/* ---- Image area ---- */
+.region-image-area { margin: 12px 0 0; }
+
+/* ---- Results: bbox overlay ---- */
+.image-card {
+  position: relative;
+}
+.bbox-overlay {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2.5px solid #7eebd9;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.bbox-label {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  background: #7eebd9;
+  color: #111;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px 3px 0 0;
+  white-space: nowrap;
+}

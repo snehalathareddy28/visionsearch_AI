@@ -10,6 +10,7 @@ import uuid
 import warnings
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import faiss
 import numpy as np
@@ -22,6 +23,11 @@ from pydantic import BaseModel
 
 from models.clip_model import load_clip_model
 from services.search_service import load_index, search_loaded, search_text_loaded
+from visionsearch_web_ui.region.api_regions import region_router
+from visionsearch_web_ui.sharing import (
+    PUBLIC_SHARING_ENABLED,
+    image_id_for_path,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_PATH = ROOT / "index" / "faiss.index"
@@ -44,11 +50,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Region-based retrieval endpoints (mounted under /api/region/...)
+app.include_router(region_router)
+
 _model = None
 _index_data = None
 _indexed_digest_paths: tuple[str, ...] | None = None
 _indexed_content_digests: set[str] = set()
 _index_lock = threading.RLock()
+_share_image_lock = threading.RLock()
+_share_image_paths_snapshot: tuple[str, ...] | None = None
+_share_image_paths: dict[str, Path] = {}
 logger = logging.getLogger(__name__)
 
 class TextQuery(BaseModel):
@@ -314,6 +326,7 @@ def normalize_results(results):
         if p:
             try:
                 rel = p.relative_to(ROOT.resolve()).as_posix()
+                share_image_id = image_id_for_path(p)
                 score = None
                 if isinstance(item, dict):
                     score = item.get("score") or item.get("similarity")
@@ -322,14 +335,24 @@ def normalize_results(results):
                 output.append({
                     "name": p.name,
                     "category": p.parent.name,
-                    "image_url": "/image/" + rel,
+                    "image_url": "/image/" + quote(rel, safe="/"),
+                    "share_image_id": share_image_id,
+                    "share_url": (
+                        f"/api/share/images/{share_image_id}"
+                        if PUBLIC_SHARING_ENABLED and share_image_id
+                        else None
+                    ),
                     "score": float(score) if score is not None else None,
                     "category_match": bool(
                         isinstance(item, dict) and item.get("category_match")
                     ),
                 })
             except (TypeError, ValueError):
-                output.append({"name": p.name, "image_url": "/image/" + rel, "score": None})
+                output.append({
+                    "name": p.name,
+                    "image_url": "/image/" + quote(rel, safe="/"),
+                    "score": None,
+                })
     return output
 
 def _get_indexed_content_digests(paths: list[str]) -> set[str]:
@@ -354,6 +377,40 @@ def _get_indexed_content_digests(paths: list[str]) -> set[str]:
         _indexed_content_digests = digests
     return set(_indexed_content_digests)
 
+
+def _get_share_image_paths() -> dict[str, Path]:
+    global _share_image_paths_snapshot, _share_image_paths
+    _, indexed_paths = get_index()
+    snapshot = tuple(str(path) for path in indexed_paths)
+    with _share_image_lock:
+        if snapshot != _share_image_paths_snapshot:
+            paths = {}
+            for indexed_path in indexed_paths:
+                path = safe_result_path(indexed_path)
+                if path is None:
+                    continue
+                image_id = image_id_for_path(path)
+                if image_id is not None:
+                    paths[image_id] = path
+            _share_image_paths_snapshot = snapshot
+            _share_image_paths = paths
+        return dict(_share_image_paths)
+
+
+def _supported_image_media_type(path: Path) -> str | None:
+    media_types = {
+        "JPEG": "image/jpeg",
+        "PNG": "image/png",
+        "WEBP": "image/webp",
+    }
+    try:
+        with Image.open(path) as image:
+            image_format = image.format
+            image.verify()
+    except (OSError, ValueError, Image.DecompressionBombError):
+        return None
+    return media_types.get(image_format)
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "index_ready": INDEX_PATH.exists() and PATHS_PATH.exists()}
@@ -371,6 +428,28 @@ def upload_limits():
         "max_request_bytes": MAX_UPLOAD_REQUEST_BYTES,
         "max_files": MAX_UPLOAD_FILES_PER_REQUEST,
     }
+
+
+@app.get("/api/share/images/{image_id}")
+def serve_share_image(image_id: str):
+    if not PUBLIC_SHARING_ENABLED:
+        raise HTTPException(status_code=404, detail="Public image sharing is disabled.")
+    if not re.fullmatch(r"[a-f0-9]{64}", image_id):
+        raise HTTPException(status_code=404, detail="Image not found.")
+
+    image_path = _get_share_image_paths().get(image_id)
+    if image_path is None:
+        raise HTTPException(status_code=404, detail="Image not found.")
+
+    media_type = _supported_image_media_type(image_path)
+    if media_type is None:
+        raise HTTPException(status_code=404, detail="Image not found.")
+
+    return FileResponse(
+        image_path,
+        media_type=media_type,
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 @app.post("/api/search/text")
 def text_search(body: TextQuery):
