@@ -2,6 +2,7 @@ import hashlib
 import io
 import json
 import logging
+import math
 import os
 import re
 import tempfile
@@ -14,7 +15,7 @@ from urllib.parse import quote
 
 import faiss
 import numpy as np
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +25,18 @@ from pydantic import BaseModel
 from models.clip_model import load_clip_model
 from services.search_service import load_index, search_loaded, search_text_loaded
 from visionsearch_web_ui.region.api_regions import region_router
+from visionsearch_web_ui.secure_info.auth import AuthenticatedUser
+from visionsearch_web_ui.secure_info.auth_api import (
+    get_registration_service,
+    require_authenticated_user,
+    router as secure_info_router,
+)
+from visionsearch_web_ui.secure_info.database import SecureInfoDatabaseError
+from visionsearch_web_ui.secure_info.encryption import EncryptionConfigurationError
+from visionsearch_web_ui.secure_info.service import (
+    SecureInformationRetrievalError,
+    SilverJubileeService,
+)
 from visionsearch_web_ui.sharing import (
     PUBLIC_SHARING_ENABLED,
     image_id_for_path,
@@ -42,9 +55,21 @@ MAX_UPLOAD_FILES_PER_REQUEST = int(os.getenv("VISIONSEARCH_MAX_UPLOAD_FILES_PER_
 SUPPORTED_IMAGE_FORMATS = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
 
 app = FastAPI(title="VisionSearch AI API")
+_configured_cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "VISIONSEARCH_CORS_ORIGINS",
+        "http://127.0.0.1:8000,http://localhost:8000",
+    ).split(",")
+    if origin.strip()
+]
+if not _configured_cors_origins or "*" in _configured_cors_origins:
+    raise RuntimeError(
+        "VISIONSEARCH_CORS_ORIGINS must contain explicit origins and cannot include '*'."
+    )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_configured_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,16 +77,38 @@ app.add_middleware(
 
 # Region-based retrieval endpoints (mounted under /api/region/...)
 app.include_router(region_router)
+app.include_router(secure_info_router)
 
 _model = None
 _index_data = None
-_indexed_digest_paths: tuple[str, ...] | None = None
+_indexed_digest_paths: tuple[tuple[str, Path | None], ...] | None = None
 _indexed_content_digests: set[str] = set()
 _index_lock = threading.RLock()
 _share_image_lock = threading.RLock()
 _share_image_paths_snapshot: tuple[str, ...] | None = None
 _share_image_paths: dict[str, Path] = {}
 logger = logging.getLogger(__name__)
+
+
+def _configured_similarity_value(name: str, default: str) -> float:
+    try:
+        value = float(os.getenv(name, default))
+    except ValueError as error:
+        raise RuntimeError(f"{name} must be a number between 0 and 1.") from error
+    if not math.isfinite(value) or not 0 <= value <= 1:
+        raise RuntimeError(f"{name} must be a number between 0 and 1.")
+    return value
+
+
+SILVER_JUBILEE_SIMILARITY_THRESHOLD = _configured_similarity_value(
+    "VISIONSEARCH_SILVER_JUBILEE_SIMILARITY_THRESHOLD",
+    "0.75",
+)
+SILVER_JUBILEE_AMBIGUITY_MARGIN = _configured_similarity_value(
+    "VISIONSEARCH_SILVER_JUBILEE_AMBIGUITY_MARGIN",
+    "0.02",
+)
+
 
 class TextQuery(BaseModel):
     query: str
@@ -357,11 +404,10 @@ def normalize_results(results):
 
 def _get_indexed_content_digests(paths: list[str]) -> set[str]:
     global _indexed_digest_paths, _indexed_content_digests
-    path_snapshot = tuple(paths)
+    path_snapshot = tuple((image_path, safe_result_path(image_path)) for image_path in paths)
     if path_snapshot != _indexed_digest_paths:
         digests = set()
-        for image_path in paths:
-            resolved_path = safe_result_path(image_path)
+        for _, resolved_path in path_snapshot:
             if resolved_path is None:
                 continue
             try:
@@ -376,6 +422,30 @@ def _get_indexed_content_digests(paths: list[str]) -> set[str]:
         _indexed_digest_paths = path_snapshot
         _indexed_content_digests = digests
     return set(_indexed_content_digests)
+
+
+def _stale_upload_path_ids(paths: list[str], digest: str) -> list[int]:
+    upload_root = UPLOAD_DIR.resolve()
+    matching_ids = []
+    for path_id, image_path in enumerate(paths):
+        if safe_result_path(image_path) is not None:
+            continue
+        candidate = Path(image_path)
+        if not candidate.is_absolute():
+            candidate = ROOT / candidate
+        try:
+            candidate = candidate.resolve()
+            candidate.relative_to(upload_root)
+        except (OSError, ValueError):
+            continue
+        match = re.search(
+            r"__sha256_([0-9a-f]{64})(?:_\d+)?\.[^.]+$",
+            candidate.name,
+            re.IGNORECASE,
+        )
+        if match and match.group(1).lower() == digest:
+            matching_ids.append(path_id)
+    return matching_ids
 
 
 def _get_share_image_paths() -> dict[str, Path]:
@@ -481,6 +551,137 @@ async def image_search(file: UploadFile = File(...), top_k: int = 10):
     embedding = model.encode_image(image)
     results = search_loaded(index, paths, embedding, top_k=max(1, min(top_k, 50)))
     return {"results": normalize_results(results)}
+
+
+@app.post("/api/silver-jubilee/search")
+async def silver_jubilee_image_search(
+    file: UploadFile = File(...),
+    current_user: AuthenticatedUser = Depends(require_authenticated_user),
+    service: SilverJubileeService = Depends(get_registration_service),
+):
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Upload a valid image file.")
+    if MAX_UPLOAD_FILE_BYTES < 1:
+        raise HTTPException(status_code=500, detail="Image upload limits are configured incorrectly.")
+    if file.size is not None and file.size > MAX_UPLOAD_FILE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image exceeds the {_format_size_limit(MAX_UPLOAD_FILE_BYTES)} upload limit.",
+        )
+
+    try:
+        image_bytes = await file.read(MAX_UPLOAD_FILE_BYTES + 1)
+        if not image_bytes:
+            raise ValueError("The uploaded image is empty.")
+        if len(image_bytes) > MAX_UPLOAD_FILE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Image exceeds the {_format_size_limit(MAX_UPLOAD_FILE_BYTES)} upload limit.",
+            )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(image_bytes)) as uploaded_image:
+                if uploaded_image.format not in SUPPORTED_IMAGE_FORMATS:
+                    raise ValueError("Unsupported image format.")
+                uploaded_image.verify()
+            with Image.open(io.BytesIO(image_bytes)) as uploaded_image:
+                image = uploaded_image.convert("RGB")
+    except HTTPException:
+        raise
+    except (OSError, ValueError, Image.DecompressionBombError, Image.DecompressionBombWarning) as error:
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded file could not be opened as a supported image.",
+        ) from error
+
+    try:
+        index, paths = get_index()
+        embedding = get_model().encode_image(image)
+        candidates = search_loaded(
+            index,
+            paths,
+            embedding,
+            top_k=2,
+            threshold=min(SILVER_JUBILEE_SIMILARITY_THRESHOLD, 0.20),
+        )
+    except HTTPException:
+        raise
+    except Exception as error:
+        logger.exception("Silver Jubilee image matching failed.")
+        raise HTTPException(
+            status_code=503,
+            detail="Image matching is temporarily unavailable.",
+        ) from error
+
+    if not candidates or candidates[0]["score"] < SILVER_JUBILEE_SIMILARITY_THRESHOLD:
+        return {"matched": False, "reason": "no_confident_match"}
+
+    best_candidate = candidates[0]
+    best_path = safe_result_path(best_candidate["image_path"])
+    if best_path is None:
+        return {"matched": False, "reason": "no_registered_information"}
+
+    if (
+        len(candidates) > 1
+        and candidates[1]["score"] >= SILVER_JUBILEE_SIMILARITY_THRESHOLD
+    ):
+        second_path = safe_result_path(candidates[1]["image_path"])
+        if second_path is None:
+            return {"matched": False, "reason": "ambiguous_match"}
+        try:
+            best_digest = _sha256_file(best_path)
+            second_digest = _sha256_file(second_path)
+        except OSError as error:
+            logger.exception("Could not verify an indexed image for Silver Jubilee matching.")
+            raise HTTPException(
+                status_code=503,
+                detail="Image matching is temporarily unavailable.",
+            ) from error
+        if (
+            best_digest != second_digest
+            and best_candidate["score"] - candidates[1]["score"]
+            <= SILVER_JUBILEE_AMBIGUITY_MARGIN
+        ):
+            return {"matched": False, "reason": "ambiguous_match"}
+    else:
+        try:
+            best_digest = _sha256_file(best_path)
+        except OSError as error:
+            logger.exception("Could not verify an indexed image for Silver Jubilee matching.")
+            raise HTTPException(
+                status_code=503,
+                detail="Image matching is temporarily unavailable.",
+            ) from error
+
+    image_reference = best_path.relative_to(ROOT.resolve()).as_posix()
+    try:
+        information = service.retrieve_authorized_information(
+            best_digest,
+            current_user,
+            expected_image_reference=image_reference,
+        )
+    except (SecureInfoDatabaseError, EncryptionConfigurationError) as error:
+        logger.exception("Silver Jubilee record lookup failed.")
+        raise HTTPException(
+            status_code=503,
+            detail="Registered information is temporarily unavailable.",
+        ) from error
+    except SecureInformationRetrievalError as error:
+        logger.error("Registered Silver Jubilee information could not be decrypted.")
+        raise HTTPException(
+            status_code=503,
+            detail="Registered information is temporarily unavailable.",
+        ) from error
+
+    if information is None:
+        return {"matched": False, "reason": "no_registered_information"}
+    return {
+        "matched": True,
+        "title": information.title,
+        "similarity": float(best_candidate["score"]),
+        "information": information.information,
+    }
+
 
 @app.post("/api/upload")
 async def upload_images(
@@ -679,6 +880,7 @@ async def upload_images(
             new_vectors = []
             new_paths = []
             new_files = []
+            stale_path_ids_to_replace = set()
             seen_digests = set(known_digests)
 
             for item in staged:
@@ -736,12 +938,37 @@ async def upload_images(
                 new_vectors.append(vector[0])
                 new_paths.append(str(destination))
                 new_files.append((item["temporary_path"], destination, item["filename"]))
+                stale_path_ids_to_replace.update(
+                    _stale_upload_path_ids(current_paths, digest)
+                )
                 seen_digests.add(digest)
 
             if new_vectors:
                 appended_embeddings = np.asarray(new_vectors, dtype=np.float32)
-                combined_embeddings = np.concatenate((existing_embeddings, appended_embeddings), axis=0)
                 updated_index = faiss.clone_index(current_index)
+                if stale_path_ids_to_replace:
+                    removed_ids = np.asarray(sorted(stale_path_ids_to_replace), dtype=np.int64)
+                    removed_count = updated_index.remove_ids(removed_ids)
+                    if removed_count != len(removed_ids):
+                        raise HTTPException(
+                            status_code=503,
+                            detail="A stale image could not be safely replaced in the saved index.",
+                        )
+                    kept_path_ids = set(stale_path_ids_to_replace)
+                    current_paths = [
+                        path for path_id, path in enumerate(current_paths)
+                        if path_id not in kept_path_ids
+                    ]
+                    existing_embeddings = np.delete(
+                        existing_embeddings,
+                        removed_ids,
+                        axis=0,
+                    )
+
+                combined_embeddings = np.concatenate(
+                    (existing_embeddings, appended_embeddings),
+                    axis=0,
+                )
                 updated_index.add(appended_embeddings)
                 combined_paths = [*current_paths, *new_paths]
                 try:
@@ -760,7 +987,10 @@ async def upload_images(
 
                 _index_data = (updated_index, combined_paths)
                 _indexed_content_digests.update(seen_digests)
-                _indexed_digest_paths = tuple(combined_paths)
+                _indexed_digest_paths = tuple(
+                    (image_path, safe_result_path(image_path))
+                    for image_path in combined_paths
+                )
 
             successful_count = sum(result["status"] == "indexed" for result in file_results)
             duplicate_count = sum(result["status"] == "duplicate" for result in file_results)

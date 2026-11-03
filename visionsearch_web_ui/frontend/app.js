@@ -15,10 +15,20 @@ const previewLimit = 12;
 
 function setMode(nextMode) {
   mode = nextMode;
-  $("crumb-mode").textContent = nextMode === "text" ? "Text Search" : nextMode === "image" ? "Image Search" : "Upload Images";
+  const modeLabels = {
+    text: "Text Search",
+    image: "Image Search",
+    region: "Region Search",
+    upload: "Upload Images",
+    "silver-jubilee": "Silver Jubilee Information"
+  };
+  $("crumb-mode").textContent = modeLabels[nextMode] || "Text Search";
   $("text-form").classList.toggle("hidden", nextMode !== "text");
   $("image-form").classList.toggle("hidden", nextMode !== "image");
+  $("region-form").classList.toggle("hidden", nextMode !== "region");
   $("upload-form").classList.toggle("hidden", nextMode !== "upload");
+  $("silver-jubilee-form").classList.toggle("hidden", nextMode !== "silver-jubilee");
+  document.querySelector(".results-section").classList.toggle("hidden", nextMode === "silver-jubilee");
   document.querySelectorAll("[data-mode]").forEach(button => {
     button.classList.toggle("active", button.classList.contains("nav-item") && button.dataset.mode === nextMode);
     button.classList.toggle("selected", button.classList.contains("mode-tab") && button.dataset.mode === nextMode);

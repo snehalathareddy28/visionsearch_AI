@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/styles.css?v=20261102-2">
   <link rel="stylesheet" href="/share.css?v=20261102-2">
   <link rel="stylesheet" href="/region_search.css?v=20261102-2">
+  <link rel="stylesheet" href="/silver_jubilee.css?v=20261103-3">
 </head>
 <body>
   <div class="shell">
@@ -17,6 +18,7 @@
       <button class="nav-item" data-mode="image">▧ <span>Image Search</span></button>
       <button class="nav-item" data-mode="region">◈ <span>Region Search</span></button>
       <button class="nav-item" data-mode="upload">↑ <span>Upload Images</span></button>
+      <button class="nav-item" data-mode="silver-jubilee">✦ <span>Silver Jubilee Information</span></button>
       <div class="side-note"><div class="pulse"></div><div><strong>AI Engine</strong><small id="engine-status">Checking connection…</small></div></div>
       <div class="sidebar-footer">VISIONSEARCH AI <span>•</span> MULTIMODAL RETRIEVAL</div>
     </aside>
@@ -35,6 +37,7 @@
           <button class="mode-tab" data-mode="image">▧ &nbsp; Image to Image</button>
           <button class="mode-tab" data-mode="region">◈ &nbsp; Region Search</button>
           <button class="mode-tab" data-mode="upload">↑ &nbsp; Upload Images</button>
+          <button class="mode-tab" data-mode="silver-jubilee">✦ &nbsp; Silver Jubilee Information</button>
         </div>
         <form id="text-form" class="search-form">
           <label for="query">DESCRIBE WHAT YOU'RE LOOKING FOR</label>
@@ -136,6 +139,114 @@
           </div>
           <button id="upload-submit" class="primary image-submit" type="submit" disabled>Upload and index images <span>↗</span></button>
         </form>
+
+        <div id="silver-jubilee-form" class="search-form silver-jubilee-panel hidden">
+          <div class="silver-heading">
+            <div>
+              <label>COLLEGE HISTORY &amp; MILESTONES</label>
+              <h2>Silver Jubilee Information</h2>
+              <p>Sign in to securely find information associated with a college photograph.</p>
+            </div>
+            <span class="silver-badge">AUTHENTICATED ACCESS</span>
+          </div>
+
+          <form id="secure-login-form" class="silver-card silver-login">
+            <h3 id="secure-login-heading">Sign in</h3>
+            <p id="secure-login-description">Use your authorized VisionSearch account to continue.</p>
+            <div class="silver-login-fields">
+              <div class="silver-field">
+                <label for="secure-username">Username</label>
+                <input id="secure-username" name="username" autocomplete="username" minlength="3" maxlength="64" required>
+              </div>
+              <div class="silver-field">
+                <label for="secure-password">Password</label>
+                <input id="secure-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="1024" required>
+              </div>
+              <button id="secure-login-submit" class="primary" type="submit">Sign in <span>↗</span></button>
+            </div>
+          </form>
+
+          <div id="secure-session-panel" class="silver-card silver-session hidden" aria-live="polite">
+            <div>
+              <strong id="secure-session-label"></strong>
+              <small id="secure-session-role"></small>
+            </div>
+            <button id="secure-logout" class="secondary-button" type="button">Sign out</button>
+          </div>
+          <div id="silver-auth-message" class="silver-message hidden" role="status" aria-live="polite"></div>
+
+          <section id="silver-user-panel" class="silver-card hidden">
+            <h3>Find Silver Jubilee information</h3>
+            <p>Upload a photograph to match it against the registered college image collection.</p>
+            <form id="silver-search-form">
+              <label class="silver-upload" for="silver-search-file">
+                <span class="upload-icon">↑</span>
+                <strong id="silver-search-file-label">Choose a college photograph</strong>
+                <small>JPEG, PNG, or WebP</small>
+                <img id="silver-search-preview" class="silver-preview hidden" alt="Preview of the selected photograph">
+              </label>
+              <input id="silver-search-file" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required hidden>
+              <button id="silver-search-submit" class="primary" type="submit" disabled>Search Silver Jubilee records <span>↗</span></button>
+            </form>
+            <div id="silver-search-message" class="silver-message hidden" role="status" aria-live="polite"></div>
+            <article id="silver-search-result" class="silver-result hidden" aria-live="polite">
+              <img id="silver-result-preview" class="silver-preview" alt="Uploaded photograph used for the match">
+              <div>
+                <span class="silver-result-kicker">REGISTERED PHOTOGRAPH MATCH</span>
+                <h4 id="silver-result-title"></h4>
+                <span id="silver-result-similarity" class="score"></span>
+                <p id="silver-result-information"></p>
+              </div>
+            </article>
+          </section>
+
+          <section id="silver-admin-panel" class="silver-card hidden">
+            <h3>Administrator tools</h3>
+            <p>Choose an image from the existing indexed collection. The server verifies its reference and hash before saving.</p>
+            <section class="silver-user-management" aria-labelledby="silver-user-management-heading">
+              <div class="silver-records-heading">
+                <div><h4 id="silver-user-management-heading">User Management</h4><small>Create and manage regular user accounts.</small></div>
+                <button id="silver-refresh-users" class="secondary-button" type="button">Refresh users</button>
+              </div>
+              <form id="silver-user-create-form" class="silver-user-form">
+                <div class="silver-field">
+                  <label for="silver-user-username">Username</label>
+                  <input id="silver-user-username" minlength="3" maxlength="64" pattern="[A-Za-z0-9._-]+" autocomplete="off" required>
+                </div>
+                <div class="silver-field">
+                  <label for="silver-user-password">Temporary password</label>
+                  <input id="silver-user-password" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required>
+                </div>
+                <button id="silver-user-create-submit" class="primary" type="submit">Create user <span>↗</span></button>
+              </form>
+              <div id="silver-user-management-message" class="silver-message hidden" role="status" aria-live="polite"></div>
+              <div id="silver-users" class="silver-users" aria-live="polite"></div>
+            </section>
+            <form id="silver-candidate-form" class="silver-candidate-form">
+              <label for="silver-candidate-query">Find an indexed photograph</label>
+              <div class="silver-inline-row">
+                <input id="silver-candidate-query" maxlength="1000" placeholder="Search the image collection" required>
+                <button id="silver-candidate-submit" class="secondary-button" type="submit">Find photographs</button>
+              </div>
+            </form>
+            <div id="silver-candidate-message" class="silver-message hidden" role="status" aria-live="polite"></div>
+            <div id="silver-candidates" class="silver-candidates" role="group" aria-label="Indexed photograph search results"></div>
+            <div id="silver-selected-photo" class="silver-selected-photo hidden" aria-live="polite"></div>
+            <form id="silver-registration-form" class="silver-registration-form">
+              <label for="silver-title">Information title</label>
+              <input id="silver-title" minlength="1" maxlength="200" required>
+              <label for="silver-information">Silver Jubilee information</label>
+              <textarea id="silver-information" rows="6" minlength="1" maxlength="100000" required></textarea>
+              <button id="silver-registration-submit" class="primary" type="submit" disabled>Register photograph <span>↗</span></button>
+            </form>
+            <div id="silver-registration-message" class="silver-message hidden" role="status" aria-live="polite"></div>
+            <div class="silver-records-heading">
+              <div><h4>Registered information</h4><small>Titles, selected image names, and timestamps only.</small></div>
+              <button id="silver-refresh-records" class="secondary-button" type="button">Refresh list</button>
+            </div>
+            <div id="silver-records" class="silver-records"></div>
+          </section>
+        </div>
       </section>
 
       <section class="results-section">
@@ -147,7 +258,8 @@
     </main>
   </div>
   <script src="/share.js?v=20261102-2"></script>
-  <script src="/app.js?v=20261102-2"></script>
+  <script src="/app.js?v=20261103-1"></script>
   <script src="/region_search.js?v=20261102-2"></script>
+  <script src="/silver_jubilee.js?v=20261103-3"></script>
 </body>
 </html>

@@ -61,3 +61,38 @@ The upload summary reports successful, duplicate, and failed files separately.
 SHA-256 content checks skip duplicates already present in the existing index,
 even when the indexed filename differs. Failed files can be retried without
 re-uploading successful or duplicate files.
+
+Silver Jubilee information is stored separately from region metadata. Before
+using its admin API, configure VISIONSEARCH_AES_KEY and an explicit
+VISIONSEARCH_CORS_ORIGINS value. Keep VISIONSEARCH_AUTH_COOKIE_SECURE=true for
+HTTPS deployments. For local HTTP development only, set
+VISIONSEARCH_AUTH_COOKIE_SECURE=false in the local environment; do not use that
+setting on a public deployment.
+
+Provision accounts from a trusted local shell, never through public
+registration endpoints. Create the one-time administrator with:
+
+   python -m visionsearch_web_ui.secure_info.auth_cli create-admin --username admin
+
+The CLI prompts for the password twice without echoing it. It requires a
+minimum 12-character password, stores only a salted scrypt hash, and refuses
+to create a second administrator. Provision each ordinary user locally with:
+
+   python -m visionsearch_web_ui.secure_info.auth_cli create-user --username user1
+
+The Silver Jubilee API uses an HttpOnly, SameSite=Lax session cookie with a
+server-side expiration and revocation record, plus a CSRF token for login,
+logout, and admin mutations. First request
+GET /api/secure-info/auth/csrf; send the returned token in the
+X-CSRF-Token header when posting to
+POST /api/secure-info/auth/login. Use the rotated token returned by login for
+subsequent mutations. Logout with POST /api/secure-info/auth/logout. Admin
+registration operations are under /api/secure-info/registrations; responses
+contain registration metadata only, never ciphertext, nonce, or decrypted
+information. Image matching and information retrieval are not enabled yet.
+
+VISIONSEARCH_CORS_ORIGINS must be a comma-separated list of explicit browser
+origins and cannot contain '*'. The development default permits only
+http://127.0.0.1:8000 and http://localhost:8000. Set the exact trusted web
+origins when deploying. Normal users and administrators are provisioned by
+trusted operators; there is no public account or admin registration endpoint.
