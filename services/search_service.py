@@ -15,7 +15,6 @@ INDEX_PATH = PROJECT_ROOT / "index" / "faiss.index"
 PATHS_PATH = PROJECT_ROOT / "index" / "image_paths.txt"
 
 DEFAULT_SIMILARITY_THRESHOLD = 0.20
-CATEGORY_BONUS = 0.04
 ATTRIBUTE_WEIGHT = 0.30
 
 # Map query objects to related dataset folder names.
@@ -319,21 +318,19 @@ def search_text_loaded(
 
         # Average attribute scores instead of allowing one prompt
         # to dominate the entire ranking.
-        ranking_score = result["score"]
+                # Combine CLIP similarity with attribute similarity.
+        # Folder names are metadata only and do not affect ranking.
+        final_score = result["score"]
 
         if matching_scores:
             attribute_score = sum(matching_scores) / len(matching_scores)
 
-            ranking_score = (
+            final_score = (
                 (1.0 - ATTRIBUTE_WEIGHT) * result["score"]
                 + ATTRIBUTE_WEIGHT * attribute_score
             )
 
-        # Category information is a small bonus, not a hard priority.
-        if category_match:
-            ranking_score += CATEGORY_BONUS
-
-        result["ranking_score"] = float(ranking_score)
+        result["final_score"] = float(final_score)
 
     # Filter using the full-query similarity threshold.
     results = [
@@ -342,11 +339,10 @@ def search_text_loaded(
         if result["score"] >= threshold
     ]
 
-    # The combined score determines ranking; category matches
-    # receive only the small bonus applied above.
+    # Rank by the combined score, using CLIP similarity as a tie-breaker.
     results.sort(
         key=lambda result: (
-            result["ranking_score"],
+            result["final_score"],
             result["score"],
         ),
         reverse=True,
@@ -356,8 +352,6 @@ def search_text_loaded(
 
     for rank, result in enumerate(results, start=1):
         result["rank"] = rank
-        result.pop("ranking_score", None)
-
     return results
 
 

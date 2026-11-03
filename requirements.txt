@@ -9,6 +9,8 @@ pandas
 fastapi
 uvicorn[standard]
 python-multipart
+cryptography>=42.0.0
+python-dotenv>=1.0.0
 tqdm
 ultralytics
 matplotlib

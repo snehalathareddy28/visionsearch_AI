@@ -368,17 +368,28 @@ def safe_result_path(value: Any) -> Path | None:
 
 def normalize_results(results):
     output = []
+
     for item in results:
         p = safe_result_path(item)
+
         if p:
             try:
                 rel = p.relative_to(ROOT.resolve()).as_posix()
                 share_image_id = image_id_for_path(p)
+
                 score = None
+                final_score = None
+
                 if isinstance(item, dict):
-                    score = item.get("score") or item.get("similarity")
+                    score = item.get("score")
+                    if score is None:
+                        score = item.get("similarity")
+
+                    final_score = item.get("final_score")
+
                 elif isinstance(item, (tuple, list)) and len(item) > 1:
                     score = item[1]
+
                 output.append({
                     "name": p.name,
                     "category": p.parent.name,
@@ -390,18 +401,25 @@ def normalize_results(results):
                         else None
                     ),
                     "score": float(score) if score is not None else None,
+                    "final_score": (
+                        float(final_score)
+                        if final_score is not None
+                        else None
+                    ),
                     "category_match": bool(
                         isinstance(item, dict) and item.get("category_match")
                     ),
                 })
+
             except (TypeError, ValueError):
                 output.append({
                     "name": p.name,
                     "image_url": "/image/" + quote(rel, safe="/"),
                     "score": None,
+                    "final_score": None,
                 })
-    return output
 
+    return output
 def _get_indexed_content_digests(paths: list[str]) -> set[str]:
     global _indexed_digest_paths, _indexed_content_digests
     path_snapshot = tuple((image_path, safe_result_path(image_path)) for image_path in paths)

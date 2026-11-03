@@ -5,6 +5,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+visionsearch_web_ui/secure_info/*.db
 .streamlit/secrets.toml
 dataset/
 /uploads/

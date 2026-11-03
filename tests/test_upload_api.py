@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import tempfile
@@ -218,6 +219,54 @@ class UploadApiTests(unittest.TestCase):
         )
         self.assertEqual(api.get_index()[0].ntotal, 2)
         self.assertTrue(any("old__sha256_" in Path(path).name for path in api.get_index()[1]))
+
+    def test_missing_stale_upload_duplicate_is_replaced_and_artifacts_stay_aligned(self):
+        content = image_bytes((230, 20, 20))
+        digest = hashlib.sha256(content).hexdigest()
+        stale_path = api.UPLOAD_DIR / f"vasavi__sha256_{digest}.png"
+        stale_path.parent.mkdir(parents=True)
+        stale_path.write_bytes(content)
+
+        current_index, current_paths = api.get_index()
+        with Image.open(stale_path) as image:
+            stale_embedding = api._model.encode_image(image.convert("RGB"))[0]
+        current_index.add(stale_embedding.reshape(1, -1))
+        current_paths.append(str(stale_path))
+        embeddings = np.load(api.EMBEDDINGS_PATH, allow_pickle=False)
+        np.save(
+            api.EMBEDDINGS_PATH,
+            np.concatenate((embeddings, stale_embedding.reshape(1, -1)), axis=0),
+            allow_pickle=False,
+        )
+        faiss.write_index(current_index, str(api.INDEX_PATH))
+        api.PATHS_PATH.write_text("\n".join(current_paths) + "\n", encoding="utf-8")
+        api._index_data = (current_index, current_paths)
+
+        self.assertIn(digest, api._get_indexed_content_digests(current_paths))
+        stale_path.unlink()
+
+        response = self.post_upload([
+            ("vasavi.png", content, "vasavi.png"),
+        ])
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["indexed_count"], 1)
+        self.assertEqual(response.json()["duplicate_count"], 0)
+        self.assertEqual(response.json()["failed_count"], 0)
+
+        updated_index, updated_paths = api.get_index()
+        updated_embeddings = np.load(api.EMBEDDINGS_PATH, allow_pickle=False)
+        self.assertEqual(updated_index.ntotal, len(updated_paths))
+        self.assertEqual(updated_index.ntotal, updated_embeddings.shape[0])
+        self.assertEqual(updated_index.ntotal, 2)
+        replacement_paths = [Path(path) for path in updated_paths if digest in Path(path).name]
+        self.assertEqual(len(replacement_paths), 1)
+        self.assertTrue(replacement_paths[0].is_file())
+        for vector_id in range(updated_index.ntotal):
+            np.testing.assert_allclose(
+                updated_index.reconstruct(vector_id),
+                updated_embeddings[vector_id],
+            )
 
     def test_large_folder_batches_append_and_are_searchable_immediately(self):
         api.MAX_UPLOAD_FILES_PER_REQUEST = 20

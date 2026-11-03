@@ -182,11 +182,18 @@ function renderResults(items) {
       meta.appendChild(categoryMatch);
     }
     if (typeof item.score === "number" && Number.isFinite(item.score)) {
-      const score = document.createElement("span");
-      score.className = "score";
-      score.textContent = `Similarity: ${item.score.toFixed(3)}`;
-      meta.appendChild(score);
-    }
+    const score = document.createElement("span");
+    score.className = "score";
+    score.textContent = `CLIP Similarity: ${item.score.toFixed(3)}`;
+    meta.appendChild(score);
+}
+
+if (typeof item.final_score === "number" && Number.isFinite(item.final_score)) {
+    const finalScore = document.createElement("span");
+    finalScore.className = "score";
+    finalScore.textContent = `Ranking Score: ${item.final_score.toFixed(3)}`;
+    meta.appendChild(finalScore);
+}
     if (window.VisionSearchShare) {
       meta.appendChild(window.VisionSearchShare.createShareControl(item));
     }
