@@ -1,8 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 Pillow
 numpy
 faiss-cpu
-torch
-torchvision
+torch==2.15.0+cpu
+torchvision==0.29.2+cpu
 transformers
 fastapi
 uvicorn[standard]
